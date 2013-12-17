@@ -1,4 +1,17 @@
+#################
+## Eclipse
+#################
+
+*.pydevproject
+bin/
+tmp/
 *.class
+*.tmp
+*.bak
+*.swp
+*~.nib
+.loadpath
+target/
 
 # Package Files #
 *.jar
