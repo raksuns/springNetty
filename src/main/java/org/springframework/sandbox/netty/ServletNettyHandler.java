@@ -21,9 +21,22 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 
+import javax.servlet.Servlet;
+import javax.servlet.ServletContext;
+
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 public class ServletNettyHandler extends ChannelInboundHandlerAdapter {
+	
+	private final Servlet servlet;
+	private final ServletContext servletContext;
+	
+	public ServletNettyHandler(Servlet servlet) {
+		this.servlet = servlet;
+		this.servletContext= servlet.getServletConfig().getServletContext();
+	}
 
 	@Override
 	public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
@@ -74,8 +87,6 @@ public class ServletNettyHandler extends ChannelInboundHandlerAdapter {
         }
 	}
 	
-	
-
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
 		super.channelReadComplete(ctx);
@@ -97,6 +108,33 @@ public class ServletNettyHandler extends ChannelInboundHandlerAdapter {
 		if(ctx.channel().isActive()) {
 			sendError(ctx, INTERNAL_SERVER_ERROR);
 		}
+	}
+	
+	private MockHttpServletRequest createServletRequest(HttpRequest httpRequest) {
+		UriComponents uriComponents = UriComponentsBuilder.fromUriString(httpRequest.getUri()).build();
+		
+		MockHttpServletRequest servletRequest = new MockHttpServletRequest(this.servletContext);
+		servletRequest.setRequestURI(uriComponents.getPath());
+		servletRequest.setPathInfo(uriComponents.getPath());
+		servletRequest.setMethod(httpRequest.getMethod().name());
+		
+		if(uriComponents.getScheme() != null) {
+			servletRequest.setScheme(uriComponents.getScheme());
+		}
+		
+		if(uriComponents.getHost() != null) {
+			servletRequest.setServerName(uriComponents.getHost());
+		}
+		
+		if(uriComponents.getPort() != -1) {
+			servletRequest.setServerPort(uriComponents.getPort());
+		}
+		
+		for(String name : httpRequest.headers().names()) {
+			servletRequest.addHeader(name, httpRequest.headers().get(name));
+		}
+		
+		servletRequest.setContent(httpRequest.);
 	}
 
 	private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
